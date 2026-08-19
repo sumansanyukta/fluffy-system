@@ -4,11 +4,11 @@ Update this file whenever the current phase, active feature, or implementation s
 
 ## Current Phase
 
-- Phase 2: Data Layer and Product Schema
+- Phase 3: Database Connection UI
 
 ## Current Goal
 
-- Set up product database schema, seed data with images, and prepare for AI pipeline.
+- Implement two-panel workspace: left panel for database connection/table selection, right panel for loaded table data.
 
 ## Completed
 
@@ -26,16 +26,32 @@ Update this file whenever the current phase, active feature, or implementation s
   - Created migration to make `image_url` column required
   - Seeded 3 demo products with Vercel Blob image URLs
   - Updated feature spec `02-create-data.md` with PicSUM and image requirements
+  - Updated feature spec `04-image-feature-extraction.md` — replaced `extractedFeatures` with `imageDescription` (raw JSON string from Gemini Vision)
+  - Updated `context/project-overview.md` — revised user journey: no image upload, data from Prisma DB or CSV, three-stage AI pipeline, tiered review dashboard with confidence scoring
+- Phase 3: Database Connection UI (Feature 03)
+  - Two-panel layout: left panel (380px) for database connection/table selection, right panel for data display
+  - Database connection card with status indicator and masked connection string
+  - Table selector dropdown populated from `information_schema.tables` with row counts
+  - Data table view with proper formatting (currency, image thumbnails, truncation)
+  - API routes: `GET /api/database/tables` and `GET /api/database/tables/[tableName]`
+  - SQL injection protection via table name whitelisting
+  - Removed project-related UI components (sidebar, dialogs, image upload)
+  - Removed project-related API routes
+  - Simplified editor navbar to auth controls only
 
 ## In Progress
 
 - None
 
+## Completed (Feature 03)
+
 ## Next Up
 
-- Authentication and project scaffolding (Clerk integration)
-- AI pipeline implementation (Gemini Vision + Flash)
-- Product catalog UI with image display
+- Add `imageDescription`, `generatedDescription`, `confidenceScore`, `generationStatus` columns to Product model
+- AI pipeline: Gemini Vision feature extraction + Gemini Flash description generation + quality scoring
+- Review dashboard: card grid with confidence grouping, batch actions, anomaly detection
+- CSV export of approved descriptions
+- Seed 100 diverse luxury fashion products
 
 ## Open Questions
 

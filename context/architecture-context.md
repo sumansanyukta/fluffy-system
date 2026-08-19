@@ -29,9 +29,12 @@
 
 ## AI Generation Model (V1)
 
-- Per-product generation: image URL + metadata → Gemini Vision (extract attributes) → Gemini Flash (generate description).
+- Three-stage pipeline per product:
+  1. Gemini Vision extracts visual features from product image → `Product.imageDescription` (JSON string).
+  2. Gemini Flash generates description using extracted features + metadata + brand guidelines.
+  3. Second Gemini pass scores the generated description against brand guidelines (confidence 1–10).
 - Batch processing with per-product status tracking.
-- Status states: pending, generating, completed, failed.
+- Status states: pending, extracting, generating, scored, approved, rejected, failed.
 
 ## Invariants
 

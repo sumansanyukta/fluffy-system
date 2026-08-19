@@ -1,10 +1,10 @@
 ## Goal
 
-After a product image is uploaded, extract structured visual features from the image using Gemini Vision. Store the extracted features as JSON on the product record. This JSON becomes the primary input for the description generation pipeline (feature 05).
+After a product image is assigned, extract structured visual attributes from the image using Gemini Vision. Store the raw JSON response as a string in `Product.imageDescription`. This structured data becomes the primary input for the description generation pipeline (feature 05), which parses it to generate the final product description.
 
 ## When It Runs
 
-Feature extraction triggers automatically after a product image is assigned (i.e., after `Product.imageUrl` is set via `PATCH /api/projects/[projectId]/products/[productId]`). The user does not need to take a separate action. If extraction fails, the image remains assigned but the product shows a "features not extracted" state, and the user can retry.
+Image description extraction triggers automatically after a product image is assigned (i.e., after `Product.imageUrl` is set via `PATCH /api/projects/[projectId]/products/[productId]`). The user does not need to take a separate action. If extraction fails, the image remains assigned but the product shows a "description not extracted" state, and the user can retry.
 
 ## Dependencies
 
@@ -62,10 +62,10 @@ Gemini Vision receives the product image and a structured prompt requesting the 
 
 ## Output Structure
 
-The extraction returns a JSON object conforming to the schema above. This is the `ExtractedFeatures` type.
+Gemini returns a JSON object conforming to the schema above. This is the `ImageDescription` type.
 
 ```typescript
-interface ExtractedFeatures {
+interface ImageDescription {
   dominantColors: string[]
   accentColors: string[]
   pattern: string
@@ -94,9 +94,9 @@ interface ExtractedFeatures {
 - Fetches `Product.imageUrl` from the database.
 - If no image is assigned, returns `400` with error `{ message: "No image assigned to this product" }`.
 - Calls Gemini Vision with the image (fetched from the Blob URL) and the extraction prompt.
-- Validates the response matches the expected schema.
-- Writes the JSON to `Product.extractedFeatures` in the database.
-- Returns `200` with `{ extractedFeatures: ExtractedFeatures }`.
+- Validates the response matches the expected JSON schema.
+- Serializes the JSON to a string and writes it to `Product.imageDescription` in the database.
+- Returns `200` with `{ imageDescription: string }`.
 
 ### Batch Extraction
 
@@ -104,39 +104,39 @@ interface ExtractedFeatures {
 
 - Protected route: only project owner or collaborators.
 - Accepts `{ productIds: number[] }` in the request body.
-- For each product, if `imageUrl` is set and `extractedFeatures` is null, runs extraction in parallel (max 5 concurrent).
-- Returns `{ results: { productId, status, extractedFeatures?, error? }[] }`.
-- Products without images or with existing features are skipped.
+- For each product, if `imageUrl` is set and `imageDescription` is null, runs extraction in parallel (max 5 concurrent).
+- Returns `{ results: { productId, status, imageDescription?, error? }[] }`.
+- Products without images or with existing descriptions are skipped.
 
 ## Database
 
 Add to the `Product` model in `prisma/schema.prisma`:
 
 ```
-extractedFeatures Json? @map("extracted_features")
+imageDescription String? @map("image_description")
 ```
 
-Run `npx prisma migrate dev --name add-extracted-features` after the schema change.
+Run `npx prisma migrate dev --name add-image-description` after the schema change.
 
-The column stores the full `ExtractedFeatures` JSON object. The field is nullable — products that haven't been extracted yet (no image, or extraction pending/failed) have `null`.
+The column stores the raw JSON string returned by Gemini Vision. The field is nullable — products that haven't been extracted yet (no image, or extraction pending/failed) have `null`.
 
 ## Error Handling
 
-- **No image assigned**: Route returns 400. Product stays in "no features" state.
-- **Gemini API error** (rate limit, timeout, invalid response): Route returns 500 with error message. Product remains in "no features" state.
+- **No image assigned**: Route returns 400. Product stays in "no description" state.
+- **Gemini API error** (rate limit, timeout, invalid response): Route returns 500 with error message. Product remains in "no description" state.
 - **Invalid JSON from Gemini**: Route retries once. If still invalid, returns 500.
 - **Network error fetching image from Blob**: Route returns 500. User can retry.
 
-On the client side, products with `extractedFeatures: null` and an assigned image show a "Retry extraction" button next to the product.
+On the client side, products with `imageDescription: null` and an assigned image show a "Retry extraction" button next to the product.
 
 ## Design
 
-- Extracted features are not displayed as raw JSON to the user. They are consumed internally by the description generation pipeline.
+- Extracted image descriptions are not displayed as raw JSON to the user. They are consumed internally by the description generation pipeline (feature 05).
 - In the product list, each product card shows a small status indicator:
   - No image: muted icon
-  - Image assigned, no features: warning dot (`text-warning`)
-  - Features extracted: checkmark (`text-success`)
-- A "Extract All" button appears in the project workspace header when there are products with images but no extracted features. Triggers batch extraction.
+  - Image assigned, no description: warning dot (`text-warning`)
+  - Description extracted: checkmark (`text-success`)
+- A "Extract All" button appears in the project workspace header when there are products with images but no extracted descriptions. Triggers batch extraction.
 
 ## Implementation
 
@@ -144,12 +144,12 @@ On the client side, products with `extractedFeatures: null` and an assigned imag
 
 - Install `ai` and `@ai-sdk/google` packages.
 - Create `lib/ai/gemini.ts` — singleton Google Generative AI provider instance.
-- Create `lib/ai/extract-features.ts` — shared function `extractFeatures(imageUrl: string): Promise<ExtractedFeatures>` that:
+- Create `lib/ai/extract-features.ts` — shared function `extractImageDescription(imageUrl: string): Promise<ImageDescription>` that:
   1. Fetches the image from the Blob URL.
   2. Sends it to Gemini Vision with the structured extraction prompt.
-  3. Parses and validates the response.
-  4. Returns the typed `ExtractedFeatures` object.
-- Create `app/api/projects/[projectId]/products/[productId]/extract-features/route.ts` — single-product extraction endpoint.
+  3. Parses and validates the JSON response.
+  4. Returns the typed `ImageDescription` object.
+- Create `app/api/projects/[projectId]/products/[productId]/extract-features/route.ts` — single-product extraction endpoint. Serializes the `ImageDescription` to JSON string before writing to DB.
 - Create `app/api/projects/[projectId]/extract-features/route.ts` — batch extraction endpoint.
 
 ### Client
@@ -160,20 +160,20 @@ On the client side, products with `extractedFeatures: null` and an assigned imag
 
 ### State
 
-- `Product.extractedFeatures` is the source of truth, persisted in PostgreSQL.
+- `Product.imageDescription` is the source of truth, persisted in PostgreSQL as a JSON string.
 - Client reads the field from the product list to render status indicators.
 - No client-side caching of extraction results — always read from the database.
 
 ## Check When Done
 
 - `ai` and `@ai-sdk/google` are installed and `GOOGLE_GENERATIVE_AI_API_KEY` is in `.env.local`
-- `Product` model has `extractedFeatures Json?` column, migration applied
-- Single extraction route works: assigns features to a product with an image
+- `Product` model has `imageDescription String?` column, migration applied
+- Single extraction route works: assigns image description to a product with an image
 - Batch extraction route works: processes multiple products in parallel
 - Products without images return 400 on extraction attempt
 - Invalid Gemini responses are retried once before failing
 - Product list shows correct status indicators (no image / pending / extracted)
 - "Extract All" button triggers batch extraction and updates status in real time
-- Extracted features JSON matches the `ExtractedFeatures` schema
+- `imageDescription` contains valid JSON matching the `ImageDescription` schema
 - `npm run build` passes
 - `npm run lint` passes
