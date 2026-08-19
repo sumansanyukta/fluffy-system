@@ -19,8 +19,14 @@
 
 ## Storage Model
 
-- **Database**: All product data — metadata, public image URLs, generated descriptions, generation status.
+- **Database**: All product data — metadata, image URLs, extracted features (JSON string), generated descriptions, confidence scores, generation status.
 - Images are external public URLs — no blob storage needed in V1.
+- Approved descriptions serve as few-shot examples for future generations (reinforcement learning).
+
+## Data Model
+
+- **Product**: Standalone model with metadata, image URL, and AI pipeline fields (`imageDescription`, `generatedDescription`, `confidenceScore`, `generationStatus`).
+- **Project/ProjectCollaborator**: Removed in V1 — products are global.
 
 ## Auth Model
 

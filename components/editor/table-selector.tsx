@@ -32,7 +32,7 @@ export function TableSelector({
         Select table
       </label>
       <Select
-        value={selectedTable ?? undefined}
+        value={selectedTable}
         onValueChange={(value) => {
           if (value) onSelect(value)
         }}

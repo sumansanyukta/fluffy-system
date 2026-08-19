@@ -1,179 +1,361 @@
 ## Goal
 
-After a product image is assigned, extract structured visual attributes from the image using Gemini Vision. Store the raw JSON response as a string in `Product.imageDescription`. This structured data becomes the primary input for the description generation pipeline (feature 05), which parses it to generate the final product description.
+Implement the end-to-end AI pipeline: extract visual features from product images, generate brand-aligned descriptions, score quality, and present results in a review dashboard. Store approved descriptions as few-shot examples to improve future generations (reinforcement learning).
 
 ## When It Runs
 
-Image description extraction triggers automatically after a product image is assigned (i.e., after `Product.imageUrl` is set via `PATCH /api/projects/[projectId]/products/[productId]`). The user does not need to take a separate action. If extraction fails, the image remains assigned but the product shows a "description not extracted" state, and the user can retry.
+The user clicks the **Generate** button in the left panel after selecting a table. This triggers the full pipeline for all products in the table (up to 100 rows). The right panel shows a loading state, then switches to the review tab when processing completes.
 
 ## Dependencies
 
 - `@ai-sdk/google` and `ai` packages must be installed.
 - `GOOGLE_GENERATIVE_AI_API_KEY` must be set in `.env.local`.
-- Feature spec 03 (image upload) must be complete — images must already be stored in Vercel Blob with URLs on `Product.imageUrl`.
+- Feature spec 03 (database connection UI) must be complete — user must be able to select a table and see product data.
 
-## Extraction Prompt
+---
 
-Gemini Vision receives the product image and a structured prompt requesting the following visual attributes:
+## Database Schema Changes
 
-```json
-{
-  "dominantColors": ["charcoal", "ivory"],
-  "accentColors": [],
-  "pattern": "solid",
-  "texture": "smooth wool",
-  "fabricAppearance": "structured, matte",
-  "silhouette": "tailored, straight-cut",
-  "fit": "regular",
-  "length": "hip-length",
-  "closureType": "single-breasted buttons",
-  "neckline": "notch lapel",
-  "sleeveLength": "long",
-  "embellishments": [],
-  "hardwareDetails": "horn buttons",
-  "season": "autumn/winter",
-  "formalityLevel": "smart casual",
-  "styleKeywords": ["minimalist", "tailored", "classic"],
-  "visibleDetails": ["back vent", "flap pockets"]
+### Remove Project Models
+
+Delete `Project` and `ProjectCollaborator` models from `prisma/schema.prisma`. The `Product` model becomes standalone (no FK to Project).
+
+### Add Generation Fields to Product
+
+Add to the `Product` model:
+
+```prisma
+enum GenerationStatus {
+  PENDING
+  EXTRACTING
+  GENERATING
+  SCORING
+  SCORED
+  APPROVED
+  REJECTED
+  FAILED
+}
+
+model Product {
+  id                   Int               @id @default(autoincrement())
+  name                 String
+  description          String
+  price                Decimal           @db.Decimal(10, 2)
+  fabric               String
+  category             String
+  sizeRange            String            @map("size_range")
+  imageUrl             String            @map("image_url")
+  imageDescription     String?           @map("image_description")
+  generatedDescription String?           @map("generated_description")
+  confidenceScore      Int?              @map("confidence_score")
+  generationStatus     GenerationStatus  @default(PENDING)
+  createdAt            DateTime          @default(now())
+  updatedAt            DateTime          @updatedAt
+
+  @@index([category])
+  @@index([price])
+  @@index([fabric])
+  @@index([generationStatus])
 }
 ```
+
+Run `npx prisma migrate dev --name add-generation-pipeline` after the schema change.
 
 ### Field Definitions
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `dominantColors` | `string[]` | 1–3 primary colors visible in the garment |
-| `accentColors` | `string[]` | Secondary or contrasting colors, if any |
-| `pattern` | `string` | One of: `solid`, `striped`, `plaid`, `floral`, `geometric`, `animal print`, `paisley`, `checkered`, `other` |
-| `texture` | `string` | Surface texture description (e.g., `smooth leather`, `ribbed knit`, `brushed suede`) |
-| `fabricAppearance` | `string` | How the fabric looks — drape, sheen, weight (e.g., `fluid, lustrous`, `structured, matte`) |
-| `silhouette` | `string` | Overall shape and cut (e.g., `oversized`, `tailored`, `A-line`, `relaxed`) |
-| `fit` | `string` | One of: `slim`, `regular`, `relaxed`, `oversized` |
-| `length` | `string` | Garment length relative to body (e.g., `ankle-length`, `hip-length`, `knee-length`) |
-| `closureType` | `string` | How the garment closes (e.g., `zipper`, `single-breasted buttons`, `pullover`, `belt`) |
-| `neckline` | `string` | Neckline or collar style (e.g., `V-neck`, `notch lapel`, `crew neck`, `point collar`) — leave empty for accessories/footwear |
-| `sleeveLength` | `string` | One of: `long`, `short`, `sleeveless`, `three-quarter` — leave empty for bottoms/accessories/footwear |
-| `embellishments` | `string[]` | Decorative elements (e.g., `embroidered logo`, `sequin trim`, `none`) |
-| `hardwareDetails` | `string` | Visible hardware — zippers, buckles, buttons (e.g., `gold-tone zipper`, `horn buttons`) |
-| `season` | `string` | Apparent season: `spring/summer`, `autumn/winter`, `all-season` |
-| `formalityLevel` | `string` | One of: `casual`, `smart casual`, `business`, `formal`, `black tie` |
-| `styleKeywords` | `string[]` | 2–5 descriptive style keywords |
-| `visibleDetails` | `string[]` | Notable construction details visible in the image (e.g., `back vent`, `contrast stitching`, `ribbed cuffs`) |
+| `imageDescription` | `String?` | Raw JSON string from Gemini Vision — structured visual attributes |
+| `generatedDescription` | `String?` | Product description generated by Gemini Flash |
+| `confidenceScore` | `Int?` | Quality score 1–10, initially from LLM, adjusted by human feedback |
+| `generationStatus` | `GenerationStatus` | Current pipeline status for this product |
 
-## Output Structure
+### Generation Status Flow
 
-Gemini returns a JSON object conforming to the schema above. This is the `ImageDescription` type.
+```
+PENDING → EXTRACTING → GENERATING → SCORING → SCORED → APPROVED / REJECTED
+                                    ↓
+                                  FAILED (retry → back to EXTRACTING)
+```
 
-```typescript
-interface ImageDescription {
-  dominantColors: string[]
-  accentColors: string[]
-  pattern: string
-  texture: string
-  fabricAppearance: string
-  silhouette: string
-  fit: string
-  length: string
-  closureType: string
-  neckline: string
-  sleeveLength: string
-  embellishments: string[]
-  hardwareDetails: string
-  season: string
-  formalityLevel: string
-  styleKeywords: string[]
-  visibleDetails: string[]
+---
+
+## Three-Stage AI Pipeline
+
+### Stage 1: Feature Extraction (Gemini Vision)
+
+- Input: product image URL
+- Model: Gemini Vision
+- Output: structured JSON (visual attributes) → stored in `Product.imageDescription`
+- See existing extraction prompt and `ImageDescription` type in the current spec
+
+### Stage 2: Description Generation (Gemini Flash)
+
+- Input: `imageDescription` JSON + product metadata (name, price, fabric, category, sizeRange) + brand guidelines + few-shot examples (approved descriptions from same category)
+- Model: Gemini Flash
+- Output: product description text → stored in `Product.generatedDescription`
+
+**Few-shot learning**: Before generation, fetch up to 3 approved descriptions from the same product category. Inject them as examples in the prompt:
+
+```
+You are a luxury fashion copywriter. Here are examples of approved descriptions for {category}:
+
+Example 1: {approvedDescription1}
+Example 2: {approvedDescription2}
+
+Now write a description for this product:
+- Name: {name}
+- Price: {price}
+- Fabric: {fabric}
+- Category: {category}
+- Size Range: {sizeRange}
+- Visual Attributes: {imageDescription}
+
+Brand Guidelines:
+- Aspirational, concise, no superlatives
+- Follows the brand's voice and style
+- Includes product details (price, fabric, category, size range)
+- Avoids technical terms or jargon
+```
+
+### Stage 3: Quality Scoring (Gemini — Second Pass)
+
+- Input: generated description + brand guidelines + product metadata
+- Model: Gemini Flash
+- Output: confidence score (1–10) + reasoning string
+- Stored in `Product.confidenceScore`
+
+**Scoring prompt**:
+```
+Evaluate this product description against the brand guidelines.
+
+Description: {generatedDescription}
+Product: {name}, {price}, {fabric}, {category}
+Brand Guidelines: Aspirational, concise, no superlatives, includes product details, no jargon.
+
+Return JSON:
+{
+  "score": <1-10>,
+  "reasoning": "<brief explanation of score>",
+  "issues": ["<list of specific problems, if any>"]
 }
 ```
 
-## API Route
+### Score Evolution
 
-`POST /api/projects/[projectId]/products/[productId]/extract-features`
+The confidence score is not static:
 
-- Protected route: only project owner or collaborators.
-- Fetches `Product.imageUrl` from the database.
-- If no image is assigned, returns `400` with error `{ message: "No image assigned to this product" }`.
-- Calls Gemini Vision with the image (fetched from the Blob URL) and the extraction prompt.
-- Validates the response matches the expected JSON schema.
-- Serializes the JSON to a string and writes it to `Product.imageDescription` in the database.
-- Returns `200` with `{ imageDescription: string }`.
+| Action | Score Change |
+|--------|-------------|
+| Initial generation | LLM sets score (1–10) |
+| Human approves | Score stays or increases by 1 (cap at 10) |
+| Human rejects | Score decreases by 2 |
+| Human edits and approves | Score set to 8 (editor validated) |
+| Regeneration | Score reset to new LLM evaluation |
 
-### Batch Extraction
+---
 
-`POST /api/projects/[projectId]/extract-features`
+## API Routes
 
-- Protected route: only project owner or collaborators.
-- Accepts `{ productIds: number[] }` in the request body.
-- For each product, if `imageUrl` is set and `imageDescription` is null, runs extraction in parallel (max 5 concurrent).
-- Returns `{ results: { productId, status, imageDescription?, error? }[] }`.
-- Products without images or with existing descriptions are skipped.
+### `POST /api/generate`
 
-## Database
+Trigger the full pipeline for all products in the table.
 
-Add to the `Product` model in `prisma/schema.prisma`:
-
-```
-imageDescription String? @map("image_description")
+**Request body:**
+```json
+{ "tableName": "Product" }
 ```
 
-Run `npx prisma migrate dev --name add-image-description` after the schema change.
+**Behavior:**
+1. Fetch all products from the table (max 100).
+2. For each product where `generationStatus` is `PENDING` or `FAILED`:
+   - Set status → `EXTRACTING`
+   - Run Stage 1 (feature extraction)
+   - Set status → `GENERATING`
+   - Run Stage 2 (description generation)
+   - Set status → `SCORING`
+   - Run Stage 3 (quality scoring)
+   - Set status → `SCORED`
+3. Products with existing `SCORED`/`APPROVED` descriptions are skipped.
+4. Max 3 concurrent Gemini calls to respect rate limits.
 
-The column stores the raw JSON string returned by Gemini Vision. The field is nullable — products that haven't been extracted yet (no image, or extraction pending/failed) have `null`.
+**Response:**
+```json
+{
+  "processed": 47,
+  "skipped": 3,
+  "failed": 0
+}
+```
 
-## Error Handling
+### `PATCH /api/products/[productId]/status`
 
-- **No image assigned**: Route returns 400. Product stays in "no description" state.
-- **Gemini API error** (rate limit, timeout, invalid response): Route returns 500 with error message. Product remains in "no description" state.
-- **Invalid JSON from Gemini**: Route retries once. If still invalid, returns 500.
-- **Network error fetching image from Blob**: Route returns 500. User can retry.
+Update a product's generation status (approve/reject).
 
-On the client side, products with `imageDescription: null` and an assigned image show a "Retry extraction" button next to the product.
+**Request body:**
+```json
+{
+  "action": "approve" | "reject" | "edit",
+  "generatedDescription?: string"
+}
+```
 
-## Design
+**Behavior:**
+- `approve`: Set status → `APPROVED`, adjust confidence score (+1, cap 10)
+- `reject`: Set status → `REJECTED`, adjust confidence score (-2)
+- `edit`: Set status → `APPROVED`, update `generatedDescription`, set confidence score to 8
 
-- Extracted image descriptions are not displayed as raw JSON to the user. They are consumed internally by the description generation pipeline (feature 05).
-- In the product list, each product card shows a small status indicator:
-  - No image: muted icon
-  - Image assigned, no description: warning dot (`text-warning`)
-  - Description extracted: checkmark (`text-success`)
-- A "Extract All" button appears in the project workspace header when there are products with images but no extracted descriptions. Triggers batch extraction.
+### `POST /api/generate/regenerate`
+
+Re-run generation for specific products (low-confidence or rejected).
+
+**Request body:**
+```json
+{ "productIds": [1, 5, 12] }
+```
+
+Same pipeline as `/api/generate` but scoped to selected products.
+
+### `GET /api/products?status=SCORED`
+
+Filter products by generation status for the review dashboard.
+
+---
+
+## Frontend — Review Dashboard
+
+### Layout
+
+The right panel gains a second tab:
+
+```
++----------------------------------+
+| [Data Table]  [Review]           |  ← tab bar
+|                                  |
+|  (tab content)                   |
+|                                  |
++----------------------------------+
+```
+
+- **Data Table tab**: Existing table view (feature 03)
+- **Review tab**: Card grid of generated descriptions
+
+### Review Tab — Card Grid
+
+Cards are grouped by confidence score tier:
+
+```
+High Confidence (8-10)          [Approve All]
+┌─────────────────────────────────────────┐
+│ ┌─────┐  Silk Evening Gown             │
+│ │ img │  $2,499 · Silk · Dresses       │
+│ └─────┘  "A floor-length silhouette..."│
+│         Confidence: 9  ✓ Approve  ✗ Reject  ✎ Edit │
+└─────────────────────────────────────────┘
+
+Medium Confidence (5-7)         [Approve All]
+┌─────────────────────────────────────────┐
+│ ┌─────┐  Wool Blazer                   │
+│ │ img │  $890 · Wool · Outerwear       │
+│ └─────┘  "Structured tailoring meets.." │
+│         Confidence: 6  ✓ Approve  ✗ Reject  ✎ Edit │
+└─────────────────────────────────────────┘
+
+Low Confidence (1-4)            [Regenerate All]
+┌─────────────────────────────────────────┐
+│ ┌─────┐  Cotton T-Shirt                │
+│ │ img │  $95 · Cotton · Tops           │
+│ └─────┘  "This t-shirt is very good.." │
+│         Confidence: 3  ✓ Approve  ✗ Reject  🔄 Regenerate │
+└─────────────────────────────────────────┘
+```
+
+### Card Structure
+
+Each product card shows:
+- Product image thumbnail (left)
+- Product name, price, fabric, category
+- Generated description text
+- Confidence score badge (color-coded: green 8-10, yellow 5-7, red 1-4)
+- Action buttons: Approve, Reject, Edit (inline), Regenerate (low-confidence only)
+
+### Batch Actions (top of each tier)
+
+| Button | Action | Applies to |
+|--------|--------|-----------|
+| Approve All | Sets all in tier to APPROVED | High confidence tier |
+| Regenerate All | Re-runs pipeline for all in tier | Low confidence tier |
+| Export CSV | Downloads approved descriptions | All approved products |
+
+### Inline Editing
+
+Clicking "Edit" on a card turns the description into a `<textarea>`. User edits, clicks "Save" → calls `PATCH /api/products/[productId]/status` with `action: "edit"`.
+
+---
+
+## Review Tab — Empty States
+
+| State | Display |
+|-------|---------|
+| No table selected | "Select a table and click Generate to start" |
+| Table selected, no generation | "Click Generate to create descriptions" |
+| Generation in progress | Loading spinner with "Processing products..." |
+| Generation complete, no reviews | Card grid with all scored products |
+
+---
 
 ## Implementation
 
 ### Server
 
 - Install `ai` and `@ai-sdk/google` packages.
-- Create `lib/ai/gemini.ts` — singleton Google Generative AI provider instance.
-- Create `lib/ai/extract-features.ts` — shared function `extractImageDescription(imageUrl: string): Promise<ImageDescription>` that:
-  1. Fetches the image from the Blob URL.
-  2. Sends it to Gemini Vision with the structured extraction prompt.
-  3. Parses and validates the JSON response.
-  4. Returns the typed `ImageDescription` object.
-- Create `app/api/projects/[projectId]/products/[productId]/extract-features/route.ts` — single-product extraction endpoint. Serializes the `ImageDescription` to JSON string before writing to DB.
-- Create `app/api/projects/[projectId]/extract-features/route.ts` — batch extraction endpoint.
+- Create `lib/ai/gemini.ts` — singleton Google Generative AI provider.
+- Create `lib/ai/extract-features.ts` — Stage 1: image → `ImageDescription`.
+- Create `lib/ai/generate-description.ts` — Stage 2: metadata + features → description.
+- Create `lib/ai/score-description.ts` — Stage 3: description → confidence score.
+- Create `app/api/generate/route.ts` — batch pipeline endpoint.
+- Create `app/api/products/[productId]/status/route.ts` — approve/reject/edit.
+- Create `app/api/generate/regenerate/route.ts` — re-run for selected products.
 
 ### Client
 
-- Create `components/project/product-feature-status.tsx` — status indicator component for product cards.
-- Create `components/project/extract-all-button.tsx` — batch extraction trigger button.
-- Wire up extraction after image assignment in the existing upload flow: after `PATCH` sets `imageUrl`, call `extract-features` for that product.
+- Create `components/editor/review-tab.tsx` — review dashboard with card grid.
+- Create `components/editor/product-review-card.tsx` — individual product card.
+- Create `components/editor/review-toolbar.tsx` — batch action buttons.
+- Update `components/editor/table-data-panel.tsx` — add tab bar (Data Table | Review).
+- Update `app/editor/page.tsx` — manage generation state, tab switching.
 
 ### State
 
-- `Product.imageDescription` is the source of truth, persisted in PostgreSQL as a JSON string.
-- Client reads the field from the product list to render status indicators.
-- No client-side caching of extraction results — always read from the database.
+- `generationStatus` on each Product is the source of truth.
+- Client polls `GET /api/products?status=SCORED` after generation starts (or uses simple loading state).
+- No client-side caching — always read from database.
+
+---
+
+## Error Handling
+
+- **Gemini API error** (rate limit, timeout): Product status → `FAILED`. User can retry individually or in bulk.
+- **Invalid JSON from Gemini**: Retry once. If still invalid, status → `FAILED`.
+- **No image URL on product**: Skip extraction, status → `FAILED` with reason "No image".
+- **Database write failure**: Return 500, product remains in previous state.
+
+---
 
 ## Check When Done
 
-- `ai` and `@ai-sdk/google` are installed and `GOOGLE_GENERATIVE_AI_API_KEY` is in `.env.local`
-- `Product` model has `imageDescription String?` column, migration applied
-- Single extraction route works: assigns image description to a product with an image
-- Batch extraction route works: processes multiple products in parallel
-- Products without images return 400 on extraction attempt
-- Invalid Gemini responses are retried once before failing
-- Product list shows correct status indicators (no image / pending / extracted)
-- "Extract All" button triggers batch extraction and updates status in real time
-- `imageDescription` contains valid JSON matching the `ImageDescription` schema
+- `ai` and `@ai-sdk/google` are installed, `GOOGLE_GENERATIVE_AI_API_KEY` in `.env.local`
+- `Project` and `ProjectCollaborator` models removed from schema
+- `Product` model has `imageDescription`, `generatedDescription`, `confidenceScore`, `generationStatus` columns
+- Migration applied successfully
+- `POST /api/generate` processes all products in table (max 100)
+- Three-stage pipeline runs: extraction → generation → scoring
+- Few-shot examples injected from approved descriptions in same category
+- `PATCH /api/products/[productId]/status` handles approve/reject/edit with score adjustment
+- Review tab shows card grid grouped by confidence tier
+- Batch actions work: Approve All, Regenerate All, Export CSV
+- Inline editing saves changes and updates score to 8
+- Generation status flow: PENDING → EXTRACTING → GENERATING → SCORING → SCORED
+- Failed products can be retried
 - `npm run build` passes
 - `npm run lint` passes

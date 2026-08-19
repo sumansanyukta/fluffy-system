@@ -20,6 +20,7 @@ This version has breaking changes — APIs, conventions, and file structure may 
 
 Read the following files in order before implementing or making any architectural decision:
 
+0. `context/architecture-map.md` — machine-readable project map (auto-updated by pre-commit hook; run `npm run update-map` to regenerate)
 1. `context/project-overview.md` — product definition, goals, features, and scope
 2. `context/architecture-context.md` — system structure, boundaries, storage model, and invariants
 3. `context/ui-context.md` — theme, colors, typography, canvas design, and component conventions
@@ -28,5 +29,6 @@ Read the following files in order before implementing or making any architectura
 6. `context/progress-tracker.md` — current phase, completed work, open questions, and next steps
 
 Update `context/progress-tracker.md` after each meaningful implementation change.
+Update `context/architecture-map.md` Key Invariants section when architectural rules change.
 
 If implementation changes the architecture, scope, or standards documented in the context files, update the relevant file before continuing.
