@@ -133,6 +133,8 @@
 ```
 Prisma → PostgreSQL
 Enum: GenerationStatus { PENDING, EXTRACTING, GENERATING, SCORING, SCORED, APPROVED, REJECTED, FAILED }
+Enum: ScoreEventType { AI_SCORED, HUMAN_DECIDED }
+Enum: HumanAction { APPROVE, REJECT, EDIT }
 
 Model: Product
   id                   Int              
@@ -147,8 +149,24 @@ Model: Product
   generatedDescription String
   confidenceScore      Int
   generationStatus     GenerationStatus 
+  lastScoringModel     String
+  lastScoredAt         DateTime
   createdAt            DateTime         
   updatedAt            DateTime         
+  scoreEvents          ScoreEvent[]
+Model: ScoreEvent
+  id              Int           
+  productId       Int           
+  product         Product       
+  eventType       ScoreEventType 
+  aiScore         Int
+  scoringModel    String
+  reasoning       String
+  issues          String
+  humanAction     HumanAction
+  previousScore   Int
+  adjustedScore   Int
+  createdAt       DateTime      
 
 Relationships:
 ```

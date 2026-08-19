@@ -34,7 +34,7 @@ const products = [
     category: "Dresses",
     sizeRange: "XS–L",
     imageUrl:
-      "https://iiwjx45jhl82azdf.private.blob.vercel-storage.com/dress-2.png?vercel-blob-delegation=eyJzdG9yZUlkIjoic3RvcmVfSUl3ang0NWpobDgyQVpEZiIsIm93bmVySWQiOiJ0ZWFtX2hjMXcyd2dFM3pJcHFPRjJhdUMzSEl2SCIsInBhdGhuYW1lIjoiKiIsIm9wZXJhdGlvbnMiOlsiZ2V0IiwiaGVhZCJdLCJ2YWxpZFVudGlsIjoxNzg3MjEzMTIzMzkzLCJpYXQiOjE3ODcxNjk5MjM1MDl9.D2K79wxEAebvXrDAIsrm0SbpI8lAG1N8ikIEMtuCR1w&vercel-blob-signature=B6iBNF-bLqs-R0k4ocB_AVdx5YXhIPW_xo--5NAzupo",
+      "https://iiwjx45jhl82azdf.private.blob.vercel-storage.com/dress_3.png?vercel-blob-delegation=eyJzdG9yZUlkIjoic3RvcmVfSUl3ang0NWpobDgyQVpEZiIsIm93bmVySWQiOiJ0ZWFtX2hjMXcyd2dFM3pJcHFPRjJhdUMzSEl2SCIsInBhdGhuYW1lIjoiKiIsIm9wZXJhdGlvbnMiOlsiZ2V0IiwiaGVhZCJdLCJ2YWxpZFVudGlsIjoxNzg3MjEzMzM4MTkwLCJpYXQiOjE3ODcxNzAxMzgyOTJ9.IEScDLxYrLKnnpBqu3NTmBvSDS7wWnFnbtnxWBpQxKc&vercel-blob-signature=TEqYk_acZeUii3Ixo7bevABAmWYm0Lvp-tQ3cQkYdB0",
   },
 ];
 
