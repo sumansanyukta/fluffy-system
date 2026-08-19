@@ -1,91 +1,91 @@
-# Ghost AI
+# Fashion Description Generator
 
 ## Overview
 
-Ghost AI is a real-time collaborative system design workspace. Users describe a system in plain English, an AI agent maps that system onto a shared canvas, collaborators refine the architecture, and the app generates a technical specification from the resulting graph.
+A luxury fashion retailer — one of our clients — wants to automate product descriptions for their new collection. They have 8,000 products launching next month. Each product has 4-6 studio images (stored as public URLs), structured metadata (name, price, fabric, category, size range), and brand guidelines that are very specific about tone — aspirational, concise, no superlatives.
 
-## Goals
+Currently, a team of 3 copywriters writes these by hand. It takes about 2 weeks. The client wants it done in 3 days, at roughly 1/10th the cost, without sacrificing quality.
 
-1. Let authenticated users create and manage architecture projects.
-2. Provide a collaborative real-time canvas for system design.
-3. Let users import prebuilt starter system designs into the canvas.
-4. Let AI generate an initial architecture from a natural language prompt.
-5. Let collaborators refine the generated architecture.
-6. Convert the final graph into a persistent Markdown technical spec.
+## Goals (V1)
 
-## Core User Flow
+1. Bulk import product catalog (metadata + public image URLs) via CSV or direct database connection.
+2. AI generates product descriptions for each product using the image and metadata.
+3. User reviews, approves, or regenerates descriptions.
+4. Export approved descriptions.
+
+## Brand Guidelines
+
+- Aspirational, concise, no superlatives.
+- Follows the brand's voice and style.
+- Includes product details, such as price, fabric, category, size range.
+- Avoids using technical terms or jargon.
+
+## Core User Flow (V1)
 
 1. User signs in.
-2. User creates or selects a project.
-3. User enters the project workspace.
-4. User optionally imports a starter system design template into the canvas.
-5. User prompts the AI to generate or extend the system design.
-6. AI generates nodes and edges in the shared canvas.
-7. Collaborators edit and refine the design.
-8. User triggers spec generation.
-9. App persists the generated Markdown spec.
-10. User reviews or downloads the spec.
+2. User imports product catalog (CSV upload or direct database connection).
+3. User sees a product catalog with thumbnails and metadata.
+4. User clicks "Generate All" (or selects specific products).
+5. AI generates product descriptions using the image URL + metadata.
+6. User reviews each generated description alongside the product image.
+7. User approves, rejects, or requests regeneration.
+8. User downloads approved descriptions as CSV.
 
-## Features
+## Features (V1)
 
-### Authentication and Projects
+### Authentication
 
-- User sign-in and route protection.
-- Project creation, ownership, and collaborator access.
-- Project list and workspace navigation.
+- User sign-in and route protection via Clerk.
 
-### Collaborative Canvas
+### Product Catalog
 
-- Shared real-time canvas using Liveblocks and React Flow.
-- Live cursors, presence indicators, and node/edge editing.
-- Canvas snapshots persisted to the filesystem.
+- Flat product catalog (no projects for V1).
+- Products imported via CSV with columns: name, description, price, fabric, category, size_range, image_url.
+- Products can also be loaded directly from a connected database.
+- Each product displays: name, price, fabric, category, size range, thumbnail image, generation status.
 
-### Starter System Designs
+### AI Pipeline
 
-- A curated library of prebuilt system design templates.
-- Users can import a starter template into the canvas at any point during editing.
-- Templates are static canvas snapshots loaded directly into the active room.
-- Covers common patterns: monolith, microservices, event-driven, serverless, and more.
+- Two-stage pipeline per product:
+  1. Gemini Vision reads the public image URL and extracts visual attributes (color, texture, fit, style).
+  2. Gemini Flash generates the description using extracted attributes, product metadata, and brand guidelines.
+- Products are processed in batch with progress tracking per product.
+- Status states: pending, generating, completed, failed.
 
-### AI Architecture Generation
+### Review and Approval
 
-- AI generates a system design from a user-supplied prompt.
-- Output is structured as canvas nodes and edges written into the shared room.
-- Generation runs as a durable background task.
+- User reviews each generated description alongside the product image.
+- Approve to finalize, or reject with feedback.
+- Reject triggers regeneration with adjusted prompt context.
 
-### Spec Generation
+### Export
 
-- The current canvas graph is converted into a Markdown technical specification.
-- Specs are persisted as files and linked to the project in the database.
-- Users can view and download generated specs.
+- Download all approved descriptions as CSV.
 
-## Scope
+## Scope (V1)
 
 ### In Scope
 
 - Authentication and route protection
-- Project creation and ownership
-- Collaborator access by project
-- Starter system design template library and import
-- Real-time shared canvas with nodes, edges, and presence
-- AI-powered architecture generation from prompts
-- AI-powered Markdown spec generation from the canvas graph
-- Persistent storage for project metadata and generated artifacts
-- Spec download
+- CSV import for bulk product creation
+- Direct database connection for product import
+- AI description generation (image + metadata → description)
+- Batch generation with progress tracking
+- Review and approval workflow
+- CSV export of approved descriptions
 
-### Out Of Scope
+### Out Of Scope (V1)
 
+- Project management and collaboration
+- Vercel Blob / image upload (images are external public URLs)
+- Canvas / real-time collaboration
+- Background task queues (Trigger.dev)
 - Billing and subscription systems
-- Enterprise permission tiers beyond owner and collaborator
-- Versioned spec history and review workflows
-- Production object storage migration
 - Mobile-native applications
 
-## Success Criteria
+## Success Criteria (V1)
 
-1. A signed-in user can create and open a project.
-2. Multiple users can collaborate in the same canvas simultaneously.
-3. A user can import a prebuilt starter design into the canvas.
-4. AI can generate an architecture into the shared room from a prompt.
-5. The graph can be converted into a persisted Markdown spec.
-6. Project metadata and generated artifacts are stored in the correct layers.
+1. A signed-in user can import 8,000 products via CSV.
+2. AI generates a product description from the public image URL and metadata.
+3. The user can review and approve generated descriptions.
+4. Approved descriptions can be downloaded as CSV.

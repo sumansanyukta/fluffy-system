@@ -1,0 +1,67 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../lib/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum ProjectStatus {
+  DRAFT
+  ARCHIVED
+}
+
+model Project {
+  id             String        @id @default(cuid())
+  ownerId        String
+  name           String
+  description    String?
+  status         ProjectStatus @default(DRAFT)
+  canvasJsonPath String?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  collaborators ProjectCollaborator[]
+  products      Product[]
+
+  @@index([ownerId])
+  @@index([createdAt])
+}
+
+model ProjectCollaborator {
+  id        String   @id @default(cuid())
+  projectId String
+  email     String
+  createdAt DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@unique([projectId, email])
+  @@index([email])
+  @@index([projectId, createdAt])
+}
+
+model Product {
+  id          Int      @id @default(autoincrement())
+  projectId   String
+  name        String
+  description String
+  price       Decimal  @db.Decimal(10, 2)
+  fabric      String
+  category    String
+  sizeRange   String   @map("size_range")
+  imageUrl    String   @map("image_url")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+  @@index([category])
+  @@index([price])
+  @@index([fabric])
+}
