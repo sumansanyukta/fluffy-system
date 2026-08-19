@@ -118,13 +118,15 @@ export default function EditorPage() {
   }, [fetchReviewProducts])
 
   const handleApproveAll = useCallback(async (ids: number[]) => {
-    for (const id of ids) {
-      await fetch(`/api/products/${id}/status`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ action: "approve" }),
-      })
-    }
+    await Promise.all(
+      ids.map((id) =>
+        fetch(`/api/products/${id}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "approve" }),
+        })
+      )
+    )
     await fetchReviewProducts()
   }, [fetchReviewProducts])
 
@@ -137,6 +139,13 @@ export default function EditorPage() {
     await fetchReviewProducts()
   }, [fetchReviewProducts])
 
+  const sanitizeCsvCell = useCallback((value: string) => {
+    if (/^[=+\-@\t\r]/.test(value)) {
+      return `'${value}`
+    }
+    return value
+  }, [])
+
   const handleExportCsv = useCallback(() => {
     const approved = reviewProducts.filter((p) => p.generationStatus === "APPROVED")
     if (approved.length === 0) return
@@ -146,10 +155,10 @@ export default function EditorPage() {
       headers.join(","),
       ...approved.map((p) =>
         [
-          `"${p.name}"`,
-          `"${p.category}"`,
+          `"${sanitizeCsvCell(p.name)}"`,
+          `"${sanitizeCsvCell(p.category)}"`,
           p.price,
-          `"${p.fabric}"`,
+          `"${sanitizeCsvCell(p.fabric)}"`,
           `"${(p.generatedDescription ?? "").replace(/"/g, '""')}"`,
         ].join(",")
       ),

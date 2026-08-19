@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { auth } from "@clerk/nextjs/server";
 import { prisma } from "@/lib/prisma";
 import { extractImageDescription } from "@/lib/ai/extract-features";
 import { generateDescription } from "@/lib/ai/generate-description";
@@ -95,6 +96,11 @@ async function processBatch(productIds: number[]) {
 }
 
 export async function POST(request: Request) {
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const body = await request.json();
   const { tableName } = body as { tableName: string };
 
