@@ -1,8 +1,7 @@
 # Architecture Map
 
 > Machine-readable project map. Update when files/folders change. Do not edit `components/ui/*` or `lib/generated/*`.
-
-**Stack:** Next.js 16 · React 19 · Tailwind v4 · shadcn/ui v4 (base-ui) · Clerk · Prisma 7 (PostgreSQL) · Vercel Blob · Yarn 4
+**Stack:** Next.js 16.3.1 · React 19.2.8 · Tailwind 4.3.3 · shadcn/ui ^4.18.0 · Clerk ^7.7.7 · Prisma ^7.9.1 · Vercel Blob · Yarn 4
 
 **Theme:** Dark-only. All tokens in `app/globals.css` → `@theme inline`. No hex overrides.
 
@@ -11,58 +10,77 @@
 ## Directory Tree
 
 ```
-app/                          # Next.js App Router
-├── layout.tsx                  # Root: ClerkProvider + Geist fonts + dark theme
-├── page.tsx                    # Redirect: → /editor (authed) or /sign-in
-├── globals.css                 # Theme tokens + Tailwind @theme inline
-├── editor/page.tsx             # Main workspace (client component)
-├── sign-in/[[...sign-in]]/page.tsx   # Clerk sign-in
-├── sign-up/[[...sign-up]]/page.tsx   # Clerk sign-up
-└── api/
-    ├── products/route.ts       # GET products by projectId
-    └── projects/
-        ├── route.ts            # GET/POST projects
-        └── [projectId]/
-            ├── upload/route.ts            # POST upload to Vercel Blob
-            └── products/[productId]/route.ts  # PATCH update imageUrl
-
-components/
-├── editor/
-│   ├── editor-navbar.tsx       # Top bar: sidebar toggle + Clerk auth
-│   ├── project-sidebar.tsx     # Project list (my/shared tabs)
-│   └── dialogs/
-│       ├── create-project-dialog.tsx
-│       ├── delete-project-dialog.tsx
-│       └── rename-project-dialog.tsx
-├── image-upload-zone.tsx       # Drag-drop upload (JPEG/PNG, 10MB max)
-├── image-thumbnail-strip.tsx   # Horizontal scrollable image thumbnails
-└── ui/                         # ⚠️ shadcn primitives — DO NOT MODIFY
-    ├── button.tsx, card.tsx, dialog.tsx, input.tsx
-    ├── scroll-area.tsx, tabs.tsx, textarea.tsx
-
-hooks/
-└── use-project-dialogs.ts      # Dialog state for create/rename/delete
-
-lib/
-├── prisma.ts                   # Prisma singleton (PG + Accelerate)
-├── utils.ts                    # cn() — clsx + tailwind-merge
-└── generated/                  # ⚠️ Auto-generated — DO NOT EDIT
-    └── prisma/ (client.ts, enums.ts, models/, ...)
-
-prisma/
-├── schema.prisma               # 3 models: Project, ProjectCollaborator, Product
-├── seed.ts                     # 1 project + 3 dress products
-└── migrations/                 # 4 migrations applied
-
-context/                        # Project docs (read these for context)
-├── project-overview.md         # Product definition, goals, user flow
-├── architecture-context.md     # System boundaries, invariants
-├── ui-context.md               # Theme tokens, typography, layout rules
-├── code-standards.md           # Implementation conventions
-├── ai-workflow-rules.md        # Dev workflow, scoping rules
-├── progress-tracker.md         # Current phase + open questions
-├── architecture-map.md         # ← THIS FILE
-└── feature-specs/              # Design specs (reference, not code)
+├── AGENTS.md
+├── CLAUDE.md
+├── components.json
+├── eslint.config.mjs
+├── next.config.ts
+├── package.json
+├── postcss.config.mjs
+├── prisma.config.ts
+├── proxy.ts
+├── README.md
+├── skills-lock.json
+├── tsconfig.json
+├── app/
+│   ├── favicon.ico
+│   ├── globals.css
+│   ├── layout.tsx
+│   ├── page.tsx
+│   ├── editor/
+│   │   └── page.tsx
+│   ├── sign-in/[[...sign-in]]/page.tsx
+│   ├── sign-up/[[...sign-up]]/page.tsx
+│   └── api/
+│   │   ├── database/
+│   │   │   ├── tables/
+│   │   │   │   ├── [tableName]/route.ts
+│   │   ├── database/
+│   │   │   ├── tables/route.ts
+│   │   ├── generate/
+│   │   │   ├── regenerate/route.ts
+│   │   ├── generate/route.ts
+│   │   ├── products/
+│   │   │   ├── [productId]/
+│   │   │   │   ├── status/route.ts
+│   │   ├── products/route.ts
+├── components/
+│   ├── data-table.tsx
+│   ├── database-connection-card.tsx
+│   ├── database-panel.tsx
+│   ├── editor-navbar.tsx
+│   ├── product-review-card.tsx
+│   ├── review-tab.tsx
+│   ├── review-toolbar.tsx
+│   ├── table-data-panel.tsx
+│   ├── table-selector.tsx
+│   └── ui/                         # ⚠️ shadcn primitives — DO NOT MODIFY
+│       └── button.tsx
+│       └── card.tsx
+│       └── dialog.tsx
+│       └── input.tsx
+│       └── scroll-area.tsx
+│       └── select.tsx
+│       └── tabs.tsx
+│       └── textarea.tsx
+├── hooks/
+├── lib/
+│   ├── prisma.ts
+│   ├── utils.ts
+│   └── generated/                  # ⚠️ Auto-generated — DO NOT EDIT
+├── prisma/
+│   ├── schema.prisma
+│   ├── seed.ts
+│   └── migrations/
+└── context/
+    ├── ai-workflow-rules.md
+    ├── architecture-context.md
+    ├── architecture-map.md
+    ├── code-standards.md
+    ├── progress-tracker.md
+    ├── project-overview.md
+    ├── ui-context.md
+└── feature-specs/
 ```
 
 ---
@@ -71,17 +89,16 @@ context/                        # Project docs (read these for context)
 
 | Route | File | Method | Auth | Purpose |
 |-------|------|--------|------|---------|
-| `/` | `app/page.tsx` | GET | No | Redirect to /editor or /sign-in |
 | `/editor` | `app/editor/page.tsx` | GET | Yes | Main editor workspace |
-| `/sign-in` | `app/sign-in/[[...sign-in]]/page.tsx` | GET | No | Clerk sign-in |
-| `/sign-up` | `app/sign-up/[[...sign-up]]/page.tsx` | GET | No | Clerk sign-up |
-| `/api/projects` | `app/api/projects/route.ts` | GET | Yes | List user's projects |
-| `/api/projects` | `app/api/projects/route.ts` | POST | Yes | Create project |
-| `/api/products` | `app/api/products/route.ts` | GET | Yes | List products (by projectId) |
-| `/api/projects/:id/upload` | `app/api/projects/[projectId]/upload/route.ts` | POST | Yes | Upload image to Vercel Blob |
-| `/api/projects/:id/products/:pid` | `app/api/projects/[projectId]/products/[productId]/route.ts` | PATCH | Yes | Update product imageUrl |
-
-**Middleware:** `proxy.ts` — Clerk auth. Protects all routes except `/sign-in`, `/sign-up`.
+| `/` | `app/page.tsx` | GET | No | Redirect: → /editor or /sign-in |
+| `/sign-in/[[...sign-in]]` | `app/sign-in/[[...sign-in]]/page.tsx` | GET | No | Clerk sign-in |
+| `/sign-up/[[...sign-up]]` | `app/sign-up/[[...sign-up]]/page.tsx` | GET | No | Clerk sign-up |
+| `/api/database/tables/[tableName]/route.ts` | `app/api/database/tables/[tableName]/route.ts` | GET  | Yes | API:  database → tables →  → route.ts |
+| `/api/database/tables/route.ts` | `app/api/database/tables/route.ts` | GET  | Yes | API:  database → tables → route.ts |
+| `/api/generate/regenerate/route.ts` | `app/api/generate/regenerate/route.ts` | POST  | Yes | API:  generate → regenerate → route.ts |
+| `/api/generate/route.ts` | `app/api/generate/route.ts` | POST  | Yes | API:  generate → route.ts |
+| `/api/products/[productId]/status/route.ts` | `app/api/products/[productId]/status/route.ts` | PATCH  | Yes | API:  products →  → status → route.ts |
+| `/api/products/route.ts` | `app/api/products/route.ts` | GET  | Yes | API:  products → route.ts |
 
 ---
 
@@ -89,14 +106,16 @@ context/                        # Project docs (read these for context)
 
 | File | Type | Purpose |
 |------|------|---------|
-| `editor/editor-navbar.tsx` | Client | Top nav: sidebar toggle + Clerk UserButton |
-| `editor/project-sidebar.tsx` | Client | Left sidebar: project list with tabs |
-| `editor/dialogs/create-project-dialog.tsx` | Client | Modal: create new project |
-| `editor/dialogs/delete-project-dialog.tsx` | Client | Modal: confirm delete project |
-| `editor/dialogs/rename-project-dialog.tsx` | Client | Modal: rename project |
-| `image-upload-zone.tsx` | Client | Drag-drop + click file picker, progress bar |
-| `image-thumbnail-strip.tsx` | Client | Horizontal thumbnails, drag-reorder, delete |
-| `ui/*.tsx` | RSC | shadcn/ui v4 primitives (base-ui, not Radix) |
+| `components/editor/data-table.tsx` | Client | data table |
+| `components/editor/database-connection-card.tsx` | Client | database connection card |
+| `components/editor/database-panel.tsx` | Client | database panel |
+| `components/editor/editor-navbar.tsx` | Client | editor navbar |
+| `components/editor/product-review-card.tsx` | Client | product review card |
+| `components/editor/review-tab.tsx` | Client | review tab |
+| `components/editor/review-toolbar.tsx` | Client | review toolbar |
+| `components/editor/table-data-panel.tsx` | Client | table data panel |
+| `components/editor/table-selector.tsx` | Client | table selector |
+| `components/ui/*.tsx` | RSC | shadcn/ui v4 primitives (base-ui, not Radix) |
 
 ---
 
@@ -104,26 +123,45 @@ context/                        # Project docs (read these for context)
 
 | File | Exports | Purpose |
 |------|---------|---------|
-| `hooks/use-project-dialogs.ts` | `useProjectDialogs()`, `slugify()`, `Project` type | Dialog state for project CRUD |
-| `lib/prisma.ts` | `prisma` singleton | Prisma client with globalThis cache in dev |
-| `lib/utils.ts` | `cn()` | Tailwind class merging |
+| `lib/prisma.ts` | const prisma | prisma |
+| `lib/utils.ts` | function cn | utils |
 
 ---
 
-## Data Model (Prisma → PostgreSQL)
+## Data Model
 
 ```
-Project ──┬── ProjectCollaborator[]  (1:N, projectId FK)
-           └── Product[]             (1:N, projectId FK)
+Prisma → PostgreSQL
+Enum: GenerationStatus { PENDING, EXTRACTING, GENERATING, SCORING, SCORED, APPROVED, REJECTED, FAILED }
 
-Product fields: id, projectId, name, description, price, fabric,
-                category, sizeRange, imageUrl, createdAt, updatedAt
+Model: Product
+  id                   Int              
+  name                 String
+  description          String
+  price                Decimal          
+  fabric               String
+  category             String
+  sizeRange            String           
+  imageUrl             String           
+  imageDescription     String
+  generatedDescription String
+  confidenceScore      Int
+  generationStatus     GenerationStatus 
+  createdAt            DateTime         
+  updatedAt            DateTime         
 
-Project fields: id, ownerId, name, description, status (DRAFT|ARCHIVED),
-                canvasJsonPath, createdAt, updatedAt
+Relationships:
 ```
 
-**Enums:** `ProjectStatus { DRAFT, ARCHIVED }`
+---
+
+## Environment Variables
+
+| Variable | Used By |
+|----------|---------|
+| `DATABASE_URL` | `app/api/database/tables/route.ts`,`lib/prisma.ts` |
+| `NEXT_PUBLIC_CLERK_SIGN_IN_URL` | `proxy.ts` |
+| `NEXT_PUBLIC_CLERK_SIGN_UP_URL` | `proxy.ts` |
 
 ---
 
@@ -135,18 +173,6 @@ Project fields: id, ownerId, name, description, status (DRAFT|ARCHIVED),
 4. All components are `"use client"` — no RSC usage yet in app components.
 5. State is local React state only — no Redux/Zustand/Jotai.
 6. Images are Vercel Blob private store with signed URLs.
-
----
-
-## Environment Variables
-
-| Variable | Used By |
-|----------|---------|
-| `DATABASE_URL` | Prisma (`lib/prisma.ts`) |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk provider |
-| `CLERK_SECRET_KEY` | Clerk API |
-| `BLOB_STORE_ID` | Vercel Blob |
-| `BLOB_READ_WRITE_TOKEN` | Vercel Blob |
 
 ---
 

@@ -15,12 +15,16 @@ interface DatabasePanelProps {
   selectedTable: string | null
   onSelectTable: (tableName: string) => void
   isDataLoaded: boolean
+  onGenerate: () => void
+  isGenerating: boolean
 }
 
 export function DatabasePanel({
   selectedTable,
   onSelectTable,
   isDataLoaded,
+  onGenerate,
+  isGenerating,
 }: DatabasePanelProps) {
   const [isConnected, setIsConnected] = useState<boolean | null>(null)
   const [isChecking, setIsChecking] = useState(true)
@@ -76,13 +80,20 @@ export function DatabasePanel({
 
         <Button
           className="w-full"
-          disabled={!selectedTable || !isDataLoaded}
-          onClick={() => {
-            alert("Coming soon")
-          }}
+          disabled={!selectedTable || !isDataLoaded || isGenerating}
+          onClick={onGenerate}
         >
-          <Sparkles className="h-4 w-4" />
-          Generate
+          {isGenerating ? (
+            <>
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-border-subtle border-t-accent-primary" />
+              Processing...
+            </>
+          ) : (
+            <>
+              <Sparkles className="h-4 w-4" />
+              Generate
+            </>
+          )}
         </Button>
       </div>
     </div>
