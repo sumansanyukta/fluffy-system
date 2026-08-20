@@ -14,7 +14,7 @@ const products = [
     category: "Dresses",
     sizeRange: "XS–L",
     imageUrl:
-      "https://iiwjx45jhl82azdf.private.blob.vercel-storage.com/dress_1.png?vercel-blob-delegation=eyJzdG9yZUlkIjoic3RvcmVfSUl3ang0NWpobDgyQVpEZiIsIm93bmVySWQiOiJ0ZWFtX2hjMXcyd2dFM3pJcHFPRjJhdUMzSEl2SCIsInBhdGhuYW1lIjoiKiIsIm9wZXJhdGlvbnMiOlsiZ2V0IiwiaGVhZCJdLCJ2YWxpZFVudGlsIjoxNzg3MjEzMDk3MjkxLCJpYXQiOjE3ODcxNjk4OTc0MzV9.YdRMtAHDgwM1e41N0-zgkSy3-a3WNwMIF2WSBasE4_s&vercel-blob-signature=kV-t62ry0WB2YW8kaOOs8j8dUKeuFUDs4y6RU64NhVE",
+      "https://iiwjx45jhl82azdf.private.blob.vercel-storage.com/dress_1.png?vercel-blob-delegation=eyJzdG9yZUlkIjoic3RvcmVfSUl3ang0NWpobDgyQVpEZiIsIm93bmVySWQiOiJ0ZWFtX2hjMXcyd2dFM3pJcHFPRjJhdUMzSEl2SCIsInBhdGhuYW1lIjoiKiIsIm9wZXJhdGlvbnMiOlsiZ2V0IiwiaGVhZCJdLCJ2YWxpZFVudGlsIjoxNzg3MjU4MTAzMzg1LCJpYXQiOjE3ODcyMTQ5MDM1NzZ9.t7jqvr2L196936_ArkpoRK7ttd2r6Cy6dlJu9mYOqYc&vercel-blob-signature=TTbo-1hIHa6MWqI4ddJKYiaeJsowwwsaSjOm5SNUbco",
   },
   {
     name: "Pleated Midi Dress",
@@ -24,7 +24,7 @@ const products = [
     category: "Dresses",
     sizeRange: "XS–XL",
     imageUrl:
-      "https://iiwjx45jhl82azdf.private.blob.vercel-storage.com/dress-2.png?vercel-blob-delegation=eyJzdG9yZUlkIjoic3RvcmVfSUl3ang0NWpobDgyQVpEZiIsIm93bmVySWQiOiJ0ZWFtX2hjMXcyd2dFM3pJcHFPRjJhdUMzSEl2SCIsInBhdGhuYW1lIjoiKiIsIm9wZXJhdGlvbnMiOlsiZ2V0IiwiaGVhZCJdLCJ2YWxpZFVudGlsIjoxNzg3MjEzMTExODA5LCJpYXQiOjE3ODcxNjk5MTE5MTh9.T8_ejnjF6yjj5vbnwkd4G5Xs8E_zjy-_HF6Gqw2clfM&vercel-blob-signature=MxYjclAGDi8EElc6cJg_xY-LPJ6u5f8iBuy-HyJP0Qw",
+      "https://iiwjx45jhl82azdf.private.blob.vercel-storage.com/dress-2.png?vercel-blob-delegation=eyJzdG9yZUlkIjoic3RvcmVfSUl3ang0NWpobDgyQVpEZiIsIm93bmVySWQiOiJ0ZWFtX2hjMXcyd2dFM3pJcHFPRjJhdUMzSEl2SCIsInBhdGhuYW1lIjoiKiIsIm9wZXJhdGlvbnMiOlsiZ2V0IiwiaGVhZCJdLCJ2YWxpZFVudGlsIjoxNzg3MjU4MTE4Nzk1LCJpYXQiOjE3ODcyMTQ5MTg5Mzl9.oKEcPyU4j1PPSoLqSjuqbbfgCHWmtoKZBs6Ov9IBs9s&vercel-blob-signature=ugkiZ4Es3WWQfybH1UA7xa-RnyfJYHbLpCV0KAnnSyQ",
   },
   {
     name: "Cotton Poplin Sundress",
@@ -34,7 +34,7 @@ const products = [
     category: "Dresses",
     sizeRange: "XS–L",
     imageUrl:
-      "https://iiwjx45jhl82azdf.private.blob.vercel-storage.com/dress_3.png?vercel-blob-delegation=eyJzdG9yZUlkIjoic3RvcmVfSUl3ang0NWpobDgyQVpEZiIsIm93bmVySWQiOiJ0ZWFtX2hjMXcyd2dFM3pJcHFPRjJhdUMzSEl2SCIsInBhdGhuYW1lIjoiKiIsIm9wZXJhdGlvbnMiOlsiZ2V0IiwiaGVhZCJdLCJ2YWxpZFVudGlsIjoxNzg3MjEzMzM4MTkwLCJpYXQiOjE3ODcxNzAxMzgyOTJ9.IEScDLxYrLKnnpBqu3NTmBvSDS7wWnFnbtnxWBpQxKc&vercel-blob-signature=TEqYk_acZeUii3Ixo7bevABAmWYm0Lvp-tQ3cQkYdB0",
+      "https://iiwjx45jhl82azdf.private.blob.vercel-storage.com/dress_3.png?vercel-blob-delegation=eyJzdG9yZUlkIjoic3RvcmVfSUl3ang0NWpobDgyQVpEZiIsIm93bmVySWQiOiJ0ZWFtX2hjMXcyd2dFM3pJcHFPRjJhdUMzSEl2SCIsInBhdGhuYW1lIjoiKiIsIm9wZXJhdGlvbnMiOlsiZ2V0IiwiaGVhZCJdLCJ2YWxpZFVudGlsIjoxNzg3MjU4MTMzODQzLCJpYXQiOjE3ODcyMTQ5MzM5Njl9.h8KaIRGuR5MnDKsbteDiHxTcytn02OpZSXq2lmz1fUY&vercel-blob-signature=1n-AMh5teNl76rnMnrw9kX4zzAj4i_dNJFShWVtWsIw",
   },
 ];
 

@@ -37,6 +37,7 @@
 │   │   │   │   ├── [tableName]/route.ts
 │   │   ├── database/
 │   │   │   ├── tables/route.ts
+│   │   ├── evaluation/route.ts
 │   │   ├── generate/
 │   │   │   ├── regenerate/route.ts
 │   │   ├── generate/route.ts
@@ -45,10 +46,14 @@
 │   │   │   │   ├── status/route.ts
 │   │   ├── products/route.ts
 ├── components/
+│   ├── calibration-chart.tsx
+│   ├── category-metrics.tsx
+│   ├── daily-trends.tsx
 │   ├── data-table.tsx
 │   ├── database-connection-card.tsx
 │   ├── database-panel.tsx
 │   ├── editor-navbar.tsx
+│   ├── evaluation-tab.tsx
 │   ├── product-review-card.tsx
 │   ├── review-tab.tsx
 │   ├── review-toolbar.tsx
@@ -95,6 +100,7 @@
 | `/sign-up/[[...sign-up]]` | `app/sign-up/[[...sign-up]]/page.tsx` | GET | No | Clerk sign-up |
 | `/api/database/tables/[tableName]/route.ts` | `app/api/database/tables/[tableName]/route.ts` | GET  | Yes | API:  database → tables →  → route.ts |
 | `/api/database/tables/route.ts` | `app/api/database/tables/route.ts` | GET  | Yes | API:  database → tables → route.ts |
+| `/api/evaluation/route.ts` | `app/api/evaluation/route.ts` | GET  | Yes | API:  evaluation → route.ts |
 | `/api/generate/regenerate/route.ts` | `app/api/generate/regenerate/route.ts` | POST  | Yes | API:  generate → regenerate → route.ts |
 | `/api/generate/route.ts` | `app/api/generate/route.ts` | POST  | Yes | API:  generate → route.ts |
 | `/api/products/[productId]/status/route.ts` | `app/api/products/[productId]/status/route.ts` | PATCH  | Yes | API:  products →  → status → route.ts |
@@ -106,10 +112,14 @@
 
 | File | Type | Purpose |
 |------|------|---------|
+| `components/editor/calibration-chart.tsx` | Client | calibration chart |
+| `components/editor/category-metrics.tsx` | Client | category metrics |
+| `components/editor/daily-trends.tsx` | Client | daily trends |
 | `components/editor/data-table.tsx` | Client | data table |
 | `components/editor/database-connection-card.tsx` | Client | database connection card |
 | `components/editor/database-panel.tsx` | Client | database panel |
 | `components/editor/editor-navbar.tsx` | Client | editor navbar |
+| `components/editor/evaluation-tab.tsx` | Client | evaluation tab |
 | `components/editor/product-review-card.tsx` | Client | product review card |
 | `components/editor/review-tab.tsx` | Client | review tab |
 | `components/editor/review-toolbar.tsx` | Client | review toolbar |
